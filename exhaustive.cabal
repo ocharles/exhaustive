@@ -14,9 +14,10 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Control.Exhaustive, Control.Exhaustive.Internal
+  exposed-modules:     Control.Exhaustive
   -- other-modules:
   other-extensions:    ConstraintKinds, FlexibleContexts, FlexibleInstances, FunctionalDependencies, GADTs, RankNTypes, ScopedTypeVariables, TypeFamilies, TypeOperators, UndecidableInstances
-  build-depends:       base >=4.7 && <4.8, generics-sop >=0.1 && <0.2, transformers >=0.3 && <0.4
+  build-depends:       base >=4.7 && <4.8, generics-sop >=0.1 && <0.2, transformers >=0.3 && <0.4, template-haskell, singletons
   hs-source-dirs:      src
   default-language:    Haskell2010
+  ghc-options: -Wall
