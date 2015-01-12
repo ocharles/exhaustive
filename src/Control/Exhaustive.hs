@@ -96,7 +96,7 @@ single @'@.
 
 module Control.Exhaustive
        (-- * Specifying Individual Constructions
-        con, ConstructorApplication, Construction,
+        con,
         -- * Combining Constructions
         (&:), finish,
         -- * Producing Data
@@ -105,6 +105,7 @@ module Control.Exhaustive
         makeExhaustive,
         -- * Implementation details
         -- | The following are implementation details, but exported to improve documentation.
+        ConstructorApplication, Construction,
         Length)
        where
 
