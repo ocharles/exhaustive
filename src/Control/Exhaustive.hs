@@ -1,9 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-|
 
@@ -67,7 +68,7 @@ Using @exhaustive@, we can get exhaustivity checks that we are at least
 considering all constructors:
 
 @
-    makeExhaustive ''Expr
+    'makeExhaustive' ''Expr
 
     parseExpr :: Parser Expr
     parseExpr =
@@ -95,26 +96,32 @@ single @'@.
 
 module Control.Exhaustive
        (-- * Specifying Individual Constructions
-        ConstructorApplication, Construction, con,
+        con, ConstructorApplication, Construction,
         -- * Combining Constructions
         (&:), finish,
         -- * Producing Data
         produceM, produceFirst, produceAll,
         -- * Utilities
-        makeExhaustive)
+        makeExhaustive,
+        -- * Implementation details
+        -- | The following are implementation details, but exported to improve documentation.
+        Length)
        where
 
-import Prelude hiding (foldr, sequence)
 import Control.Applicative
-import Language.Haskell.TH
 import Data.Foldable
 import Data.Maybe
-import Data.Promotion.Prelude (Length)
-import Data.Singletons.TypeLits ((:+))
 import Data.Traversable
+import GHC.TypeLits (Nat, type (+))
 import Generics.SOP
 import Generics.SOP.NP
-import GHC.TypeLits (Nat)
+import Language.Haskell.TH
+import Prelude hiding (foldr, sequence)
+
+-- | Compute the length of a type level list.
+type family Length (a :: [k]) :: Nat where
+  Length '[] = 0
+  Length (x ': xs) = 1 + Length xs
 
 -- | A 'Construction' is an internal representation of a data type constructor. This type
 -- is indexed by a natural number, which represents the constructor number,
@@ -148,6 +155,25 @@ typeVars [] = []
 typeVars (VarT v : vs) = v : typeVars vs
 typeVars (_ : vs) = typeVars vs
 
+parentName :: Info -> Maybe ParentName
+parentName (DataConI _ _ parent _) = Just parent
+parentName _ = Nothing
+
+constructors :: Name -> Q (Maybe [Con])
+constructors t =
+  do info <- reify t
+     case info of
+       TyConI (DataD _ _ _ ctors _) ->
+         return (Just ctors)
+       TyConI (NewtypeD _ _ _ ctor _) ->
+         return (Just [ctor])
+       TyConI (DataInstD _ _ _ ctors _) ->
+         return (Just ctors)
+       TyConI (NewtypeInstD _ _ _ ctor _) ->
+         return (Just [ctor])
+       _ -> return Nothing
+
+
 -- | 'con' builds a 'Construction' for a single constructor of a data type.
 -- Unfortunately, as this function is used via Template Haskell, the type
 -- is not particularly informative -- though you can think of the produced
@@ -166,43 +192,46 @@ typeVars (_ : vs) = typeVars vs
 con :: Name -> Q Exp
 con ctorName =
   do info <- reify ctorName
-     case info of
-       DataConI _ _ parent _ ->
-         do parentInfo <- reify parent
-            case parentInfo of
-              TyConI (DataD _ _ _ ctors _) ->
-                let matching =
-                      filter ((ctorName ==) . name . snd)
-                             (zip [0 ..] ctors)
-                in case matching of
-                     ((i,c):_) ->
-                       let tyIndex =
-                             LitT (NumTyLit (succ i))
-                           fieldTypes = conFields c
-                           constructionT =
-                             AppT (AppT (ConT ''Construction) tyIndex)
-                                  (foldr (\l r ->
-                                            AppT (AppT PromotedConsT l) r)
-                                         PromotedNilT
-                                         fieldTypes)
-                       in sigE (do names <- sequence ((newName "x") <$
-                                                      fieldTypes)
-                                   return (LamE (VarP <$> names)
-                                                (AppE (ConE 'Construction)
-                                                      (foldr (\x y ->
-                                                                InfixE (Just x)
-                                                                       (ConE '(:*))
-                                                                       (Just y))
-                                                             (ConE 'Nil)
-                                                             (map (AppE (ConE 'I) .
-                                                                   VarE)
-                                                                  names)))))
-                               (pure (ForallT (map PlainTV (typeVars fieldTypes))
-                                              []
-                                              (foldr (\l r ->
-                                                        AppT (AppT ArrowT l) r)
-                                                     constructionT
-                                                     fieldTypes)))
+     parent <- maybe (fail (show ctorName ++ " is not a data type constructor"))
+                     return
+                     (parentName info)
+     ctors <- maybe (fail ("Unable to determine constructors of " ++ show parent)) return =<<
+              constructors parent
+     let matching =
+           filter ((ctorName ==) . name . snd)
+                  (zip [0 ..] ctors)
+     case matching of
+       [] ->
+         fail ("Failed to find constructor index of " ++ show ctorName)
+       ((i,c):_) ->
+         let fieldTypes = conFields c
+             lambda =
+               (do names <- sequence ((newName "x") <$
+                                      fieldTypes)
+                   return (LamE (VarP <$> names)
+                                (AppE (ConE 'Construction)
+                                      (foldr (\x y ->
+                                                InfixE (Just x)
+                                                       (ConE '(:*))
+                                                       (Just y))
+                                             (ConE 'Nil)
+                                             (map (AppE (ConE 'I) .
+                                                   VarE)
+                                                  names)))))
+             lType =
+               (pure (ForallT (map PlainTV (typeVars fieldTypes))
+                              []
+                              (foldr (\l r ->
+                                        AppT (AppT ArrowT l) r)
+                                     (AppT (AppT (ConT ''Construction)
+                                                 (LitT (NumTyLit (succ i))))
+                                           (foldr (\l r ->
+                                                     AppT (AppT PromotedConsT l) r)
+                                                  PromotedNilT
+                                                  fieldTypes))
+                                     fieldTypes)))
+         in sigE lambda lType
+
 
 -- | Signify that you will be performing exhaustive construction of a specific data type:
 --
@@ -236,7 +265,7 @@ infixr 3 &:
 -- use one more constructor. When we construct using @False@ we are done, as the
 -- only way to satisfy the equation @2 + x = 2@ is to provide @x = 0@ -- the empty
 -- list.
-(&:) :: (Functor f, Length code ~ (n :+ Length xs))
+(&:) :: (Functor f, Length code ~ (n + Length xs))
      => f (Construction n x) -> NP (ConstructorApplication f code) xs -> NP (ConstructorApplication f code) (x ': xs)
 (&:) f xs = construct f :* xs
   where construct constructed =
@@ -259,7 +288,7 @@ produceFirst = asum . produceM
 
 -- | Produce all successful constructions of a data-type. If any constructors
 -- fail, they will not be included in the resulting list. If all constructors
--- fail, this will return 'pure' '[]'.
+-- fail, this will return 'pure' @[]@.
 produceAll
   :: (code ~ Code a, SingI code, Generic a, Alternative f)
   => NP (ConstructorApplication f code) code -> f [a]
