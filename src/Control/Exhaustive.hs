@@ -67,6 +67,8 @@ Using @exhaustive@, we can get exhaustivity checks that we are at least
 considering all constructors:
 
 @
+    makeExhaustive ''Expr
+
     parseExpr :: Parser Expr
     parseExpr =
       'produceFirst' '$'
@@ -85,6 +87,9 @@ existing parser. Specifically, we need to:
 2. Wrap each constructor application with the Template Haskell function
 'con'. Note that you also need to quote the name of the constructor with a
 single @'@.
+3. Use '&:' to combine constructors, rather than list notation.
+4. Explicitly state you are 'finish'ed.
+5. Add a call to 'makeExhaustive' on our original data type.
 
 -}
 
@@ -94,7 +99,9 @@ module Control.Exhaustive
         -- * Combining Constructions
         (&:), finish,
         -- * Producing Data
-        produceM, produceFirst, produceAll)
+        produceM, produceFirst, produceAll,
+        -- * Utilities
+        makeExhaustive)
        where
 
 import Prelude hiding (foldr, sequence)
@@ -197,6 +204,18 @@ con ctorName =
                                                      constructionT
                                                      fieldTypes)))
 
+-- | Signify that you will be performing exhaustive construction of a specific data type:
+--
+-- @
+--     data Expr = ETrue | EFalse
+--     makeExhaustive ''Expr
+-- @
+--
+-- 'makeExhaustive' doesn't introduce any new symbols into scope, but it forces an
+-- environment change, allowing you to write @$(con 'ETrue)@. If you are already using
+-- other Template Haskell routines (such as @makeLenses@) then you can omit this call.
+makeExhaustive :: Name -> Q [a]
+makeExhaustive _ = return []
 
 infixr 3 &:
 
