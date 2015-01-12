@@ -1,5 +1,5 @@
 name:                exhaustive
-version:             1.0.0
+version:             1.1.0
 synopsis:            Compile time checks that a computation considers producing data through all possible constructors
 description: For a brief tutorial to @exhaustive@, check out the documentation for "Control.Exhaustive", which contains a small example.
 homepage:            http://github.com/ocharles/exhaustive
@@ -10,8 +10,12 @@ maintainer:          ollie@ocharles.org.uk
 -- copyright:
 category:            Control
 build-type:          Simple
--- extra-source-files:
+extra-source-files: Changelog.md
 cabal-version:       >=1.10
+
+source-repository head
+  type: git
+  location: git://github.com/ocharles/exhaustive
 
 library
   exposed-modules:     Control.Exhaustive
