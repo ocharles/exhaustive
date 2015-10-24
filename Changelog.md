@@ -1,3 +1,7 @@
+## 1.1.2
+
+* Compile with generics-sop 0.2. Thanks to @kosmikus for this change.
+
 ## 1.1.1
 
 * Increased the upper-bound of base to allow < 4.9 and transforms < 0.5. Now builds on
