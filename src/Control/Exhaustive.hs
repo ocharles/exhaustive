@@ -283,7 +283,7 @@ finish = Nil
 -- first constructor to successfully be constructed (in the order defined in the
 -- original data type) will be returned, or 'empty' if all constructions fail.
 produceFirst
-  :: (code ~ Code a, SingI code, Generic a, Alternative f)
+  :: (code ~ Code a, Generic a, Alternative f)
   => NP (ConstructorApplication f code) code -> f a
 produceFirst = asum . produceM
 
@@ -291,13 +291,13 @@ produceFirst = asum . produceM
 -- fail, they will not be included in the resulting list. If all constructors
 -- fail, this will return 'pure' @[]@.
 produceAll
-  :: (code ~ Code a, SingI code, Generic a, Alternative f)
+  :: (code ~ Code a, Generic a, Alternative f)
   => NP (ConstructorApplication f code) code -> f [a]
 produceAll = fmap catMaybes . sequenceA . map optional . produceM
 
 -- | Build a list of computations, one for each constructor in a data type.
 produceM
-  :: (code ~ Code a, SingI code, Generic a, Applicative f)
+  :: (code ~ Code a, Generic a, Applicative f)
   => NP (ConstructorApplication f code) code
   -> [f a]
 produceM fs =
