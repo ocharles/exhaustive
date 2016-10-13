@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
@@ -157,9 +158,29 @@ typeVars (VarT v : vs) = v : typeVars vs
 typeVars (_ : vs) = typeVars vs
 
 parentName :: Info -> Maybe ParentName
-parentName (DataConI _ _ parent _) = Just parent
+#if MIN_VERSION_template_haskell(2,11,0)
+parentName (DataConI _ _ parent) =
+#else
+parentName (DataConI _ _ parent _) =
+#endif
+  Just parent
 parentName _ = Nothing
 
+#if MIN_VERSION_template_haskell(2,11,0)
+constructors :: Name -> Q (Maybe [Con])
+constructors t =
+  do info <- reify t
+     case info of
+       TyConI (DataD _ _ _ _ ctors _) ->
+         return (Just ctors)
+       TyConI (NewtypeD _ _ _ _ ctor _) ->
+         return (Just [ctor])
+       TyConI (DataInstD _ _ _ _ ctors _) ->
+         return (Just ctors)
+       TyConI (NewtypeInstD _ _ _ _ ctor _) ->
+         return (Just [ctor])
+       _ -> return Nothing
+#else
 constructors :: Name -> Q (Maybe [Con])
 constructors t =
   do info <- reify t
@@ -173,7 +194,7 @@ constructors t =
        TyConI (NewtypeInstD _ _ _ ctor _) ->
          return (Just [ctor])
        _ -> return Nothing
-
+#endif
 
 -- | 'con' builds a 'Construction' for a single constructor of a data type.
 -- Unfortunately, as this function is used via Template Haskell, the type

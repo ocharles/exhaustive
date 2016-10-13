@@ -1,3 +1,7 @@
+## 1.1.3
+
+* Compile with base-4.9.
+
 ## 1.1.2
 
 * Compile with generics-sop 0.2. Thanks to @kosmikus for this change.
