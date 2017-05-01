@@ -1,3 +1,9 @@
+## 1.1.4
+
+### Other Changes
+
+* Increased upper-bound of `generics-sop` to < 0.4.
+
 ## 1.1.3
 
 * Compile with base-4.9.
