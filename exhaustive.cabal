@@ -21,7 +21,7 @@ library
   exposed-modules:     Control.Exhaustive
   -- other-modules:
   other-extensions:    ConstraintKinds, FlexibleContexts, FlexibleInstances, FunctionalDependencies, GADTs, RankNTypes, ScopedTypeVariables, TypeFamilies, TypeOperators, UndecidableInstances
-  build-depends:       base >=4.7 && <4.11
+  build-depends:       base >=4.7 && <4.12
                      , generics-sop >=0.1 && <0.4
                      , transformers >=0.3 && <0.6
                      , template-haskell
