@@ -1,3 +1,9 @@
+## 1.1.6
+
+### Other Changes
+
+* Increased upper-bound of `base` to < 4.12.
+
 ## 1.1.5
 
 ### Other Changes

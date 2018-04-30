@@ -1,5 +1,5 @@
 name:                exhaustive
-version:             1.1.5
+version:             1.1.6
 synopsis:            Compile time checks that a computation considers producing data through all possible constructors
 description: For a brief tutorial to @exhaustive@, check out the documentation for "Control.Exhaustive", which contains a small example.
 homepage:            http://github.com/ocharles/exhaustive
