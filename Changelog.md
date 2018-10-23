@@ -1,3 +1,13 @@
+## Unreleased
+
+### Other Changes
+
+* Changed bounds of `template-haskell` to only support 2.14.0.0. This release is
+  thus only compatible with GHC 8.6. If this is a problem, please open an issue
+  and I can add CPP to support older GHCs.
+
+* Increased upper-bound of `base` to < 4.13.
+
 ## 1.1.6
 
 ### Other Changes

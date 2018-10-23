@@ -140,17 +140,21 @@ data Construction :: Nat -> [*] -> * where
 -- To create and use 'ConstructorApplication's, use '&:'.
 type ConstructorApplication f code = Injection (NP I) code -.-> K (f (NS (NP I) code))
 
-name :: Con -> Name
-name (NormalC n _) = n
-name (RecC n _) = n
-name (InfixC _ n _) = n
-name (ForallC _ _ c) = name c
+names :: Con -> [Name]
+names (NormalC n _) = [n]
+names (RecC n _) = [n]
+names (InfixC _ n _) = [n]
+names (ForallC _ _ c) = names c
+names (GadtC n _ _) = n
+names (RecGadtC n _ _) = n
 
 conFields :: Con -> [Type]
 conFields (NormalC _ f) = map snd f
 conFields (RecC _ f) = map (\(_, _, t) -> t) f
 conFields (InfixC l _ r) = map snd [l,r]
 conFields (ForallC _ _ c) = conFields c
+conFields (GadtC _ f _) = map snd f
+conFields (RecGadtC _ f _) = map (\(_, _, t) -> t) f
 
 typeVars :: [Type] -> [Name]
 typeVars [] = []
@@ -220,7 +224,7 @@ con ctorName =
      ctors <- maybe (fail ("Unable to determine constructors of " ++ show parent)) return =<<
               constructors parent
      let matching =
-           filter ((ctorName ==) . name . snd)
+           filter ((ctorName `elem`) . names . snd)
                   (zip [0 ..] ctors)
      case matching of
        [] ->
@@ -228,9 +232,9 @@ con ctorName =
        ((i,c):_) ->
          let fieldTypes = conFields c
              lambda =
-               (do names <- sequence ((newName "x") <$
-                                      fieldTypes)
-                   return (LamE (VarP <$> names)
+               (do ns <- sequence ((newName "x") <$
+                                   fieldTypes)
+                   return (LamE (VarP <$> ns)
                                 (AppE (ConE 'Construction)
                                       (foldr (\x y ->
                                                 InfixE (Just x)
@@ -239,7 +243,7 @@ con ctorName =
                                              (ConE 'Nil)
                                              (map (AppE (ConE 'I) .
                                                    VarE)
-                                                  names)))))
+                                                  ns)))))
              lType =
                (pure (ForallT (map PlainTV (typeVars fieldTypes))
                               []
