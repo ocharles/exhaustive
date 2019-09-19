@@ -1,3 +1,9 @@
+## 1.1.8 -- 2019-09-19
+
+### Other Changes
+
+* Support GHC 8.8
+
 ## 1.1.7 -- 2018-10-23
 
 ### Other Changes
